@@ -1,0 +1,25 @@
+<suitelet scriptid="customscript_wtz_sl_suiteql_report">
+  <description></description>
+  <isinactive>F</isinactive>
+  <name>WTZ SL SuiteQL Reporter API</name>
+  <notifyadmins>F</notifyadmins>
+  <notifyemails></notifyemails>
+  <notifyowner>T</notifyowner>
+  <notifyuser>F</notifyuser>
+  <scriptfile>[/SuiteApps/com.netsuite.wtznssuiteqlreporter/SuiteScripts/scripts/wtz-suiteql-reporter-api.js]</scriptfile>
+  <scriptdeployments>
+    <scriptdeployment scriptid="customdeploy_wtz_sl_suiteql_report">
+      <allemployees>F</allemployees>
+      <allpartners>F</allpartners>
+      <allroles>T</allroles>
+      <audslctrole></audslctrole>
+      <eventtype>GET</eventtype>
+      <isdeployed>T</isdeployed>
+      <isonline>F</isonline>
+      <loglevel>AUDIT</loglevel>
+      <runasrole></runasrole>
+      <status>RELEASED</status>
+      <title>WTZ SL SuiteQL Reporter API</title>
+    </scriptdeployment>
+  </scriptdeployments>
+</suitelet>

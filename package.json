@@ -1,0 +1,39 @@
+{
+  "author": "Tomas Watz",
+  "license": "UNLICENSED",
+  "bugs": {
+    "url": "https://github.com/watzen/NS-SuiteQL-Reporter#issues"
+  },
+  "homepage": "https://github.com/watzen/NS-SuiteQL-Reporter#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/watzen/NS-SuiteQL-Reporter.git"
+  },
+  "scripts": {
+    "build-ns-scripts": "webpack",
+    "build-react-frontend": "node build_front_end.js \"src/TypeScript/frontend\" \"src/FileCabinet/SuiteApps/com.netsuite.wtznssuiteqlreporter/SuiteScripts/models/customrecord_wtz_suiteql_report/userevent\"",
+    "build-react-frontend & upload": "node build_front_end.js \"src/TypeScript/frontend\" \"src/FileCabinet/SuiteApps/com.netsuite.wtznssuiteqlreporter/SuiteScripts/models/customrecord_wtz_suiteql_report/userevent\" && suitecloud file:upload --paths \"/SuiteApps/com.netsuite.wtznssuiteqlreporter/SuiteScripts/models/customrecord_wtz_suiteql_report/userevent/index.html\"",
+    "deployDryrun": "suitecloud project:deploy --dryrun",
+    "deploy": "suitecloud project:deploy",
+    "build-and-deploy-all": "webpack && node build_front_end.js && node build_front_end.js \"src/TypeScript/frontend\" \"src/FileCabinet/SuiteApps/com.netsuite.wtznssuiteqlreporter/SuiteScripts/models/customrecord_wtz_suiteql_report/userevent\" && suitecloud project:deploy",
+  },
+  "devDependencies": {
+    "@hitc/netsuite-types": "^2023.2.4",
+    "@oracle/suitecloud-cli": "^1.8.0",
+    "@typescript-eslint/eslint-plugin": "^5.50.0",
+    "@typescript-eslint/parser": "^5.50.0",
+    "eslint": "^8.33.0",
+    "eslint-plugin-import": "^2.27.5",
+    "eslint-plugin-suitescript": "^1.2.1",
+    "eslint-import-resolver-typescript": "^3.5.3",
+    "eslint-plugin-node": "^11.1.0",
+    "typescript": "^4.9.5",
+    "node-fetch": "^2.6.9",
+    "ts-loader": "^9.4.2",
+    "webpack": "^5.75.0",
+    "webpack-cli": "^5.0.1",
+    "webpack-stream": "^7.0.0"
+  },
+  "dependencies": {
+  }
+}

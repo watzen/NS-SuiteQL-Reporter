@@ -1,0 +1,4 @@
+jest.config.js
+src/FileCabinet/**/*.js
+suitecloud.config.js
+webpack.config.js

@@ -1,0 +1,108 @@
+<customlist scriptid="customlist_wtz_sql_report_col_types">
+  <description></description>
+  <isinactive>F</isinactive>
+  <isordered>T</isordered>
+  <name>SuiteQL Report Column Types</name>
+  <customvalues>
+    <customvalue scriptid="checkbox">
+      <isinactive>F</isinactive>
+      <value>CHECKBOX</value>
+    </customvalue>
+    <customvalue scriptid="currency">
+      <isinactive>F</isinactive>
+      <value>CURRENCY</value>
+    </customvalue>
+    <customvalue scriptid="date">
+      <isinactive>F</isinactive>
+      <value>DATE</value>
+    </customvalue>
+    <customvalue scriptid="datetimetz">
+      <isinactive>F</isinactive>
+      <value>DATETIMETZ</value>
+    </customvalue>
+    <customvalue scriptid="email">
+      <isinactive>F</isinactive>
+      <value>EMAIL</value>
+    </customvalue>
+    <customvalue scriptid="file">
+      <isinactive>F</isinactive>
+      <value>FILE</value>
+    </customvalue>
+    <customvalue scriptid="float">
+      <isinactive>F</isinactive>
+      <value>FLOAT</value>
+    </customvalue>
+    <customvalue scriptid="help">
+      <isinactive>F</isinactive>
+      <value>HELP</value>
+    </customvalue>
+    <customvalue scriptid="inlinehtml">
+      <isinactive>F</isinactive>
+      <value>INLINEHTML</value>
+    </customvalue>
+    <customvalue scriptid="image">
+      <isinactive>F</isinactive>
+      <value>IMAGE</value>
+    </customvalue>
+    <customvalue scriptid="label">
+      <isinactive>F</isinactive>
+      <value>LABEL</value>
+    </customvalue>
+    <customvalue scriptid="longtext">
+      <isinactive>F</isinactive>
+      <value>LONGTEXT</value>
+    </customvalue>
+    <customvalue scriptid="multiselect">
+      <isinactive>F</isinactive>
+      <value>MULTISELECT</value>
+    </customvalue>
+    <customvalue scriptid="passport">
+      <isinactive>F</isinactive>
+      <value>PASSPORT</value>
+    </customvalue>
+    <customvalue scriptid="password">
+      <isinactive>F</isinactive>
+      <value>PASSWORD</value>
+    </customvalue>
+    <customvalue scriptid="percent">
+      <isinactive>F</isinactive>
+      <value>PERCENT</value>
+    </customvalue>
+    <customvalue scriptid="phone">
+      <isinactive>F</isinactive>
+      <value>PHONE</value>
+    </customvalue>
+    <customvalue scriptid="select">
+      <isinactive>F</isinactive>
+      <value>SELECT</value>
+    </customvalue>
+    <customvalue scriptid="radio">
+      <isinactive>F</isinactive>
+      <value>RADIO</value>
+    </customvalue>
+    <customvalue scriptid="richtext">
+      <isinactive>F</isinactive>
+      <value>RICHTEXT</value>
+    </customvalue>
+    <customvalue scriptid="text">
+      <isinactive>F</isinactive>
+      <value>TEXT</value>
+    </customvalue>
+    <customvalue scriptid="textarea">
+      <isinactive>F</isinactive>
+      <value>TEXTAREA</value>
+    </customvalue>
+    <customvalue scriptid="timeofday">
+      <isinactive>F</isinactive>
+      <value>TIMEOFDAY</value>
+    </customvalue>
+    <customvalue scriptid="url">
+      <isinactive>F</isinactive>
+      <value>URL</value>
+    </customvalue>
+    <customvalue scriptid="integer">
+      <isinactive>F</isinactive>
+      <value>INTEGER</value>
+    </customvalue>
+  </customvalues>
+</customlist>

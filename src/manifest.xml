@@ -1,0 +1,19 @@
+<manifest projecttype="SUITEAPP">
+  <publisherid>com.netsuite</publisherid>
+  <projectid>wtznssuiteqlreporter</projectid>
+  <projectname>WTZ NS SuiteQL Reporter</projectname>
+  <projectversion>0.0.1</projectversion>
+  <frameworkversion>1.0</frameworkversion>
+  <dependencies>
+    <features>
+      <feature required="false">MULTILANGUAGE</feature>
+      <feature required="true">SERVERSIDESCRIPTING</feature>
+      <feature required="false">EXTREMELIST</feature>
+      <feature required="true">CUSTOMRECORDS</feature>
+      <feature required="false">CREATESUITEBUNDLES</feature>
+      <feature required="false">CUSTOMSEGMENTS</feature>
+      <feature required="false">CRM</feature>
+      <feature required="false">MAILMERGE</feature>
+    </features>
+  </dependencies>
+</manifest>

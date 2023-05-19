@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "module": "amd",
+    "target": "es6",
+    "moduleResolution": "node",
+    "sourceMap": false,
+    "newLine": "lf",
+    "experimentalDecorators": true,
+    "noImplicitUseStrict": true,
+    "baseUrl": ".",
+    "lib": ["es5", "dom", "es6", "es2018"],
+    "paths": {
+      "N": ["node_modules/@hitc/netsuite-types/N"],
+      "N/*": ["node_modules/@hitc/netsuite-types/N/*"],
+    },
+    "rootDir": "src/TypeScript/",
+    "outDir": "src/FileCabinet/SuiteApps/com.netsuite.wtznssuiteqlreporter/SuiteScripts/"
+  },
+  "include": ["src/TypeScript/**/*.ts"],
+  "exclude": ["node_modules"]
+}
