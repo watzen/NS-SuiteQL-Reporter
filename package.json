@@ -15,7 +15,7 @@
     "build-react-frontend & upload": "node build_front_end.js \"src/TypeScript/frontend\" \"src/FileCabinet/SuiteApps/com.netsuite.wtznssuiteqlreporter/SuiteScripts/models/customrecord_wtz_suiteql_report/userevent\" && suitecloud file:upload --paths \"/SuiteApps/com.netsuite.wtznssuiteqlreporter/SuiteScripts/models/customrecord_wtz_suiteql_report/userevent/index.html\"",
     "deployDryrun": "suitecloud project:deploy --dryrun",
     "deploy": "suitecloud project:deploy",
-    "build-and-deploy-all": "webpack && node build_front_end.js && node build_front_end.js \"src/TypeScript/frontend\" \"src/FileCabinet/SuiteApps/com.netsuite.wtznssuiteqlreporter/SuiteScripts/models/customrecord_wtz_suiteql_report/userevent\" && suitecloud project:deploy",
+    "build-and-deploy-all": "webpack && node build_front_end.js \"src/TypeScript/frontend\" \"src/FileCabinet/SuiteApps/com.netsuite.wtznssuiteqlreporter/SuiteScripts/models/customrecord_wtz_suiteql_report/userevent\" && suitecloud project:deploy"
   },
   "devDependencies": {
     "@hitc/netsuite-types": "^2023.2.4",
