@@ -1,7 +1,7 @@
 # NS-SuiteQL-Reporter
 A suite of custom records to store, distribute and display SuiteQL reports. 
 
-# Building
+# Building (it is pre-built but if you want to rebuild it)
 1. clone the repo.
 2. install npm.
 3. run "npm install" in the repo to install all dependencies.
