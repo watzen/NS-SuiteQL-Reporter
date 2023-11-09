@@ -1,5 +1,7 @@
-import { Paper } from '@mui/material'
+import FileDownloadIcon from '@mui/icons-material/FileDownload'
+import { Paper, Box, Button } from '@mui/material'
 import Grid from '@mui/material/Grid'
+import { mkConfig, generateCsv, download } from 'export-to-csv'
 import { MaterialReactTable, useMaterialReactTable, type MRT_ColumnDef } from 'material-react-table'
 import React, { useCallback, useEffect, useState } from 'react'
 import { Column } from '../../../scripts/reporter api suitelet/column-getter/index'
@@ -7,6 +9,7 @@ import { Resource } from '../constants'
 import useFetch from '../customHooks/useFetch'
 import { UserPreferences } from '../types'
 import utils from '../utils/utils'
+
 
 type ReportRow = {
     [column: string]: string | number | boolean | Date | null
@@ -100,6 +103,15 @@ const ReportViewer = (): JSX.Element => {
         // NOTE: Run effect once on component mount, please
         // recheck dependencies if effect is updated.
     }, [])
+    const handleExportDataAsCSV = () => {
+        const csvConfig = mkConfig({
+            fieldSeparator: userPreferences.csvDelimiter,
+            decimalSeparator: userPreferences.csvDecimalDelimiter,
+            useKeysAsHeaders: true,
+        })
+        const csv = generateCsv(csvConfig)(results)
+        download(csvConfig)(csv)
+    }
 
     //pass table options to useMaterialReactTable
     const table = useMaterialReactTable({
@@ -139,6 +151,24 @@ const ReportViewer = (): JSX.Element => {
         //enableColumnDragging: true,
         enableGlobalFilter: true, //turn off a feature
         enableBottomToolbar: false,
+        renderTopToolbarCustomActions: () => (
+            <Box
+                sx={{
+                    display: 'flex',
+                    gap: '16px',
+                    padding: '8px',
+                    flexWrap: 'wrap',
+                }}
+            >
+                <Button
+                    //export all data that is currently in the table (ignore pagination, sorting, filtering, etc.)
+                    onClick={handleExportDataAsCSV}
+                    startIcon={<FileDownloadIcon />}
+                >
+                    Download as CSV
+                </Button>
+            </Box>
+        ),
     })
 
 

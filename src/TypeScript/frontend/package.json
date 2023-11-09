@@ -22,6 +22,7 @@
     "core-js": "^3.26.1",
     "css-loader": "^5.2.7",
     "eslint-config-react-app": "^6.0.0",
+    "export-to-csv": "^1.2.1",
     "html-webpack-inline-source-plugin": "^0.0.10",
     "html-webpack-plugin": "^5.5.0",
     "material-react-table": "^2.0.3",
