@@ -19,3 +19,7 @@ A suite of custom records to store, distribute and display SuiteQL reports.
 
 * You can change the labels by editing the columns in the sublist of the record
 * The column order is defined by the order of the columns in the SELECT
+
+![image](https://github.com/watzen/NS-SuiteQL-Reporter/assets/613420/b7f18e5c-187c-4c75-a5c5-9b38c7dae6eb)
+
+![image](https://github.com/watzen/NS-SuiteQL-Reporter/assets/613420/61cf0dc7-b4fd-459d-b089-564d9350234d)
