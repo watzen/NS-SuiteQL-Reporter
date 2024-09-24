@@ -1,22 +1,23 @@
-import {EntryPoints} from "N/types"
 import * as log from 'N/log'
-import * as runtime from 'N/runtime'
-import * as record from 'N/record'
 import * as query from 'N/query'
-import * as REPORT_COLUMNS from '../../../customrecord_wtz_suiteql_report_columns/definitions'
-import * as SUITEQL_REPORT from '../../definitions'
+import * as record from 'N/record'
+import * as runtime from 'N/runtime'
+import { EntryPoints } from 'N/types'
 import * as COLUMN_TYPES from '../../../customlist_wtz_sql_report_col_types/definitions'
+import * as REPORT_COLUMNS from '../../../customrecord_wtz_suiteql_report_columns/definitions'
+import { getVariables } from '../../../customrecord_wtz_suiteql_report_variable'
+import * as SUITEQL_REPORT from '../../definitions'
 
 export const upsertReportColumns = (context: EntryPoints.UserEvent.afterSubmitContext) => {
-    const { newRecord, oldRecord, type } = context
+    const { newRecord, type } = context
     log.audit('hideAllFields start', {
         recordId: newRecord.id,
         contextType: type,
-        executionContext: runtime.executionContext
+        executionContext: runtime.executionContext,
     })
 
     if(type === context.UserEventType.DELETE) {
-        deleteAllOrphanColumns(oldRecord.id)
+        deleteAllOrphanColumns()
         return
     }
 
@@ -30,7 +31,7 @@ export const upsertReportColumns = (context: EntryPoints.UserEvent.afterSubmitCo
 
     inactivateRemovedColumns({ existingColumns, newReportColumns })
 
-    addMissingColumns({ existingColumns, newReportColumns, recordId: newRecord.id})
+    addMissingColumns({ existingColumns, newReportColumns, recordId: newRecord.id })
 
 }
 
@@ -51,7 +52,7 @@ const getExistingColumns = (recordId): ExistingColumn[] => {
             WHERE
                 ${REPORT_COLUMNS.FIELDS.SUITEQL_REPORT} = ?
         `,
-        params: [recordId]
+        params: [recordId],
     }).asMappedResults()
 
     return columnQueryResults.map(result => ({
@@ -66,9 +67,14 @@ type NewReportColumn = {
     sampleValue: string | boolean | Date | number,
 }
 const getNewReportColumns = (newRecord): NewReportColumn[] => {
-    const suiteQL = newRecord.getValue(SUITEQL_REPORT.FIELDS.SUITEQL)
+    let suiteQL = newRecord.getValue(SUITEQL_REPORT.FIELDS.SUITEQL)
+    const variables = getVariables(newRecord.id)
+    Object.entries(variables).forEach(([variableId, variable]) => {
+        suiteQL = suiteQL.replace(new RegExp(`{{${variableId}}}`, 'g'), variable.defaultValue)
+    })
+
     const columns = Object.keys(query.runSuiteQL({
-        query: suiteQL
+        query: suiteQL,
     }).asMappedResults()[0])
 
     const columnsWithSampleValue = query.runSuiteQL({
@@ -77,12 +83,12 @@ const getNewReportColumns = (newRecord): NewReportColumn[] => {
                 ${columns.map(columnName => `MAX(${columnName}) as ${columnName}`).join(',')}
             FROM
                 (${suiteQL})
-        `
+        `,
     }).asMappedResults()[0]
 
     return Object.entries(columnsWithSampleValue).map(([columnId, sampleValue]) => ({
-        columnId: columnId.replace(/\ /g,"_"),
-        sampleValue
+        columnId: columnId.replace(/ /g, '_'),
+        sampleValue,
     }))
 }
 
@@ -101,8 +107,8 @@ const reactivateExistingColumns = ({ existingColumns, newReportColumns }: Reacti
                 id: column.id,
                 type: REPORT_COLUMNS.RECORD.SCRIPTID,
                 values: {
-                    isinactive: false
-                }
+                    isinactive: false,
+                },
             })
         })
     } catch (e) {
@@ -126,8 +132,8 @@ const inactivateRemovedColumns = ({ existingColumns, newReportColumns }: Inactiv
                 id: column.id,
                 type: REPORT_COLUMNS.RECORD.SCRIPTID,
                 values: {
-                    isinactive: true
-                }
+                    isinactive: true,
+                },
             })
         })
     } catch (e) {
@@ -153,9 +159,9 @@ const addMissingColumns = ({ existingColumns, newReportColumns, recordId }: AddM
             })
             const valuesToSet = {
                 [REPORT_COLUMNS.FIELDS.COLUMN_ID]: column.columnId,
-                [REPORT_COLUMNS.FIELDS.COLUMN_LABEL]: column.columnId.replace(/_/g,' '),
+                [REPORT_COLUMNS.FIELDS.COLUMN_LABEL]: column.columnId.replace(/_/g, ' '),
                 [REPORT_COLUMNS.FIELDS.SUITEQL_REPORT]: recordId,
-                [REPORT_COLUMNS.FIELDS.COLUMN_DATA_TYPE]: getDataTypeIdFromSampleValue({ sampleValue: column.sampleValue })
+                [REPORT_COLUMNS.FIELDS.COLUMN_DATA_TYPE]: getDataTypeIdFromSampleValue({ sampleValue: column.sampleValue }),
             }
             Object.entries(valuesToSet).forEach(([fieldId, value]) => {
                 newColumn.setValue({ fieldId, value })
@@ -193,11 +199,11 @@ const getColumnTypeIdFromScriptId = (columnTypeScriptId): number => {
             FROM ${COLUMN_TYPES.RECORD.SCRIPTID}
             WHERE scriptid = ?
         `,
-        params: [columnTypeScriptId]
+        params: [columnTypeScriptId],
     }).asMappedResults()[0].id as number
 }
 
-const deleteAllOrphanColumns = (recordId) => {
+const deleteAllOrphanColumns = () => {
 
     query.runSuiteQL({
         query: `

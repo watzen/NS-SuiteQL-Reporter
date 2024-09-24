@@ -109,6 +109,22 @@
       </subItems>
     </tab>
     <tab>
+      <id>[scriptid=customrecord_wtz_suiteql_report.tab_report_variables]</id>
+      <label>Report Variables</label>
+      <visible>T</visible>
+      <fieldGroups>
+        <defaultFieldGroup/>
+      </fieldGroups>
+      <subItems>
+        <subList>
+          <id>[scriptid=customrecord_wtz_suiteql_report_variable.custrecord_wtz_sql_report_var_report]</id>
+          <label>SuiteQL Report Variable</label>
+          <visible>T</visible>
+          <neverEmpty>F</neverEmpty>
+        </subList>
+      </subItems>
+    </tab>
+    <tab>
       <id>RECORDNOTES</id>
       <label>Notes</label>
       <visible>T</visible>

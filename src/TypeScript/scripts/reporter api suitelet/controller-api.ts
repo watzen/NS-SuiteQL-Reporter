@@ -1,27 +1,31 @@
 import * as log from 'N/log'
 import { EntryPoints } from 'N/types'
 import { Resource } from '../../frontend/src/constants'
-import * as columnGetterService from './column-getter/index'
-import * as reportGeneratorService from './report-generator/index'
-import { userPreferenceService } from './user-preferences/index'
+import { getVariables } from '../../models/customrecord_wtz_suiteql_report_variable'
+import * as columnGetterService from './column-getter'
+import * as reportGeneratorService from './report-generator'
+import { userPreferenceService } from './user-preferences'
 import * as utils from './utils'
 
 export function get(context: EntryPoints.Suitelet.onRequestContext): void {
-    const { resource, reportId } = context.request.parameters
+    const { resource, reportId, variables } = context.request.parameters
 
     const parsedResource = utils.parseResource(resource)
 
     if (parsedResource === Resource.UserPreferences) {
         const userPreferences = userPreferenceService.getUserPreferences()
         log.audit('userPreferences', userPreferences)
-        context.response.setHeader( { name: 'content-type', value: 'application/json' } )
+        context.response.setHeader( { name: 'Content-Type', value: 'application/json' } )
         context.response.write(JSON.stringify(userPreferences))
         return
     }
 
     if (parsedResource === Resource.RunReport && reportId) {
-        const reportData = reportGeneratorService.getReportData(reportId)
-        context.response.setHeader( { name: 'content-type', value: 'application/json' } )
+        const reportData = reportGeneratorService.getReportData({
+            reportId,
+            variables: variables ? JSON.parse(variables) : undefined,
+        })
+        context.response.setHeader( { name: 'Content-Type', value: 'application/json' } )
         context.response.write(JSON.stringify(reportData))
         log.audit('reportData', reportData)
         return
@@ -29,9 +33,17 @@ export function get(context: EntryPoints.Suitelet.onRequestContext): void {
 
     if (parsedResource === Resource.GetColumns && reportId) {
         const columns = columnGetterService.getColumns(reportId)
-        context.response.setHeader( { name: 'content-type', value: 'application/json' } )
+        context.response.setHeader( { name: 'Content-Type', value: 'application/json' } )
         context.response.write(JSON.stringify(columns))
         log.audit('columns', columns)
+        return
+    }
+
+    if (parsedResource === Resource.GetVariables && reportId) {
+        const variables = getVariables(reportId)
+        context.response.setHeader( { name: 'Content-Type', value: 'application/json' } )
+        context.response.write(JSON.stringify(variables))
+        log.audit('variables', variables)
         return
     }
 

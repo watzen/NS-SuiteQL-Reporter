@@ -97,5 +97,9 @@
       <tabparent></tabparent>
       <tabtitle>Report Columns</tabtitle>
     </subtab>
+    <subtab scriptid="tab_report_variables">
+      <tabparent></tabparent>
+      <tabtitle>Report Variables</tabtitle>
+    </subtab>
   </subtabs>
 </customrecordtype>

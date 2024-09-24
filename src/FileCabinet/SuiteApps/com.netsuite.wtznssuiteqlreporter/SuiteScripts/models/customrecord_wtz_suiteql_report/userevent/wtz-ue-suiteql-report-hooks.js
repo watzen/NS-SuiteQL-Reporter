@@ -3,13 +3,13 @@
  * @NScriptType UserEventScript
  * @NModuleScope SameAccount
  */
-define(["N/file","N/log","N/query","N/record","N/runtime","N/ui/serverWidget"], (__WEBPACK_EXTERNAL_MODULE_N_file__, __WEBPACK_EXTERNAL_MODULE_N_log__, __WEBPACK_EXTERNAL_MODULE_N_query__, __WEBPACK_EXTERNAL_MODULE_N_record__, __WEBPACK_EXTERNAL_MODULE_N_runtime__, __WEBPACK_EXTERNAL_MODULE_N_ui_serverWidget__) => { return /******/ (() => { // webpackBootstrap
+define(["N/error","N/file","N/log","N/query","N/record","N/runtime","N/ui/serverWidget"], (__WEBPACK_EXTERNAL_MODULE_N_error__, __WEBPACK_EXTERNAL_MODULE_N_file__, __WEBPACK_EXTERNAL_MODULE_N_log__, __WEBPACK_EXTERNAL_MODULE_N_query__, __WEBPACK_EXTERNAL_MODULE_N_record__, __WEBPACK_EXTERNAL_MODULE_N_runtime__, __WEBPACK_EXTERNAL_MODULE_N_ui_serverWidget__) => { return /******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
 
 /***/ "./src/TypeScript/models/customrecord_wtz_suiteql_report/userevent/hooks/addSuiteQLResults.ts":
 /***/ ((module, exports, __webpack_require__) => {
 
-var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__, exports, __webpack_require__("N/log"), __webpack_require__("N/runtime"), __webpack_require__("N/query"), __webpack_require__("N/ui/serverWidget"), __webpack_require__("N/file")], __WEBPACK_AMD_DEFINE_RESULT__ = (function (require, exports, log, runtime, query, serverWidget, file) {
+var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__, exports, __webpack_require__("N/file"), __webpack_require__("N/log"), __webpack_require__("N/runtime"), __webpack_require__("N/ui/serverWidget")], __WEBPACK_AMD_DEFINE_RESULT__ = (function (require, exports, file, log, runtime, serverWidget) {
     Object.defineProperty(exports, "__esModule", ({ value: true }));
     exports.addSuiteQLResults = void 0;
     const addSuiteQLResults = (context) => {
@@ -17,7 +17,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;!(__WEBPACK_AMD_
         log.audit('runSuiteQL start', {
             recordId: newRecord.id,
             contextType: type,
-            executionContext: runtime.executionContext
+            executionContext: runtime.executionContext,
         });
         if (runtime.executionContext !== runtime.ContextType.USER_INTERFACE
             || type !== context.UserEventType.VIEW) {
@@ -31,27 +31,6 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;!(__WEBPACK_AMD_
         }
     };
     exports.addSuiteQLResults = addSuiteQLResults;
-    const getFieldParameters = ({ columnName, recordId }) => {
-        const queryResult = query.runSuiteQL({
-            query: `
-            SELECT
-                RC.${"custrecord_wtz_sql_report_col_label" /* REPORT_COLUMNS.FIELDS.COLUMN_LABEL */}
-                ,CT.scriptid
-            FROM
-                ${"customrecord_wtz_suiteql_report_columns" /* REPORT_COLUMNS.RECORD.SCRIPTID */} RC
-                LEFT JOIN ${"customlist_wtz_sql_report_col_types" /* COLUMN_TYPES.RECORD.SCRIPTID */} CT ON RC.${"custrecord_wtz_sql_report_col_type" /* REPORT_COLUMNS.FIELDS.COLUMN_DATA_TYPE */} = CT.id
-            WHERE
-                ${"custrecord_wtz_sql_report_col_report" /* REPORT_COLUMNS.FIELDS.SUITEQL_REPORT */} = ?
-                AND ${"custrecord_wtz_sql_report_col_id" /* REPORT_COLUMNS.FIELDS.COLUMN_ID */} = ?
-        `,
-            params: [recordId, columnName.replace(/\ /g, '_')],
-        }).asMappedResults()[0];
-        return {
-            id: columnName.replace(/\ /g, '_'),
-            type: serverWidget.FieldType[queryResult.scriptid],
-            label: queryResult["custrecord_wtz_sql_report_col_label" /* REPORT_COLUMNS.FIELDS.COLUMN_LABEL */]
-        };
-    };
 }).apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__),
 		__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
@@ -114,18 +93,18 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;!(__WEBPACK_AMD_
 /***/ "./src/TypeScript/models/customrecord_wtz_suiteql_report/userevent/hooks/upsertReportColumns.ts":
 /***/ ((module, exports, __webpack_require__) => {
 
-var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__, exports, __webpack_require__("N/log"), __webpack_require__("N/runtime"), __webpack_require__("N/record"), __webpack_require__("N/query")], __WEBPACK_AMD_DEFINE_RESULT__ = (function (require, exports, log, runtime, record, query) {
+var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__, exports, __webpack_require__("N/log"), __webpack_require__("N/query"), __webpack_require__("N/record"), __webpack_require__("N/runtime"), __webpack_require__("./src/TypeScript/models/customrecord_wtz_suiteql_report_variable/index.ts")], __WEBPACK_AMD_DEFINE_RESULT__ = (function (require, exports, log, query, record, runtime, customrecord_wtz_suiteql_report_variable_1) {
     Object.defineProperty(exports, "__esModule", ({ value: true }));
     exports.upsertReportColumns = void 0;
     const upsertReportColumns = (context) => {
-        const { newRecord, oldRecord, type } = context;
+        const { newRecord, type } = context;
         log.audit('hideAllFields start', {
             recordId: newRecord.id,
             contextType: type,
-            executionContext: runtime.executionContext
+            executionContext: runtime.executionContext,
         });
         if (type === context.UserEventType.DELETE) {
-            deleteAllOrphanColumns(oldRecord.id);
+            deleteAllOrphanColumns();
             return;
         }
         const existingColumns = getExistingColumns(newRecord.id);
@@ -149,7 +128,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;!(__WEBPACK_AMD_
             WHERE
                 ${"custrecord_wtz_sql_report_col_report" /* REPORT_COLUMNS.FIELDS.SUITEQL_REPORT */} = ?
         `,
-            params: [recordId]
+            params: [recordId],
         }).asMappedResults();
         return columnQueryResults.map(result => ({
             id: result.id,
@@ -158,9 +137,13 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;!(__WEBPACK_AMD_
         }));
     };
     const getNewReportColumns = (newRecord) => {
-        const suiteQL = newRecord.getValue("custrecord_wtz_sql_report_suiteql" /* SUITEQL_REPORT.FIELDS.SUITEQL */);
+        let suiteQL = newRecord.getValue("custrecord_wtz_sql_report_suiteql" /* SUITEQL_REPORT.FIELDS.SUITEQL */);
+        const variables = (0, customrecord_wtz_suiteql_report_variable_1.getVariables)(newRecord.id);
+        Object.entries(variables).forEach(([variableId, variable]) => {
+            suiteQL = suiteQL.replace(new RegExp(`{{${variableId}}}`, 'g'), variable.defaultValue);
+        });
         const columns = Object.keys(query.runSuiteQL({
-            query: suiteQL
+            query: suiteQL,
         }).asMappedResults()[0]);
         const columnsWithSampleValue = query.runSuiteQL({
             query: `
@@ -168,11 +151,11 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;!(__WEBPACK_AMD_
                 ${columns.map(columnName => `MAX(${columnName}) as ${columnName}`).join(',')}
             FROM
                 (${suiteQL})
-        `
+        `,
         }).asMappedResults()[0];
         return Object.entries(columnsWithSampleValue).map(([columnId, sampleValue]) => ({
-            columnId: columnId.replace(/\ /g, "_"),
-            sampleValue
+            columnId: columnId.replace(/ /g, '_'),
+            sampleValue,
         }));
     };
     const reactivateExistingColumns = ({ existingColumns, newReportColumns }) => {
@@ -185,8 +168,8 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;!(__WEBPACK_AMD_
                     id: column.id,
                     type: "customrecord_wtz_suiteql_report_columns" /* REPORT_COLUMNS.RECORD.SCRIPTID */,
                     values: {
-                        isinactive: false
-                    }
+                        isinactive: false,
+                    },
                 });
             });
         }
@@ -205,8 +188,8 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;!(__WEBPACK_AMD_
                     id: column.id,
                     type: "customrecord_wtz_suiteql_report_columns" /* REPORT_COLUMNS.RECORD.SCRIPTID */,
                     values: {
-                        isinactive: true
-                    }
+                        isinactive: true,
+                    },
                 });
             });
         }
@@ -228,7 +211,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;!(__WEBPACK_AMD_
                     ["custrecord_wtz_sql_report_col_id" /* REPORT_COLUMNS.FIELDS.COLUMN_ID */]: column.columnId,
                     ["custrecord_wtz_sql_report_col_label" /* REPORT_COLUMNS.FIELDS.COLUMN_LABEL */]: column.columnId.replace(/_/g, ' '),
                     ["custrecord_wtz_sql_report_col_report" /* REPORT_COLUMNS.FIELDS.SUITEQL_REPORT */]: recordId,
-                    ["custrecord_wtz_sql_report_col_type" /* REPORT_COLUMNS.FIELDS.COLUMN_DATA_TYPE */]: getDataTypeIdFromSampleValue({ sampleValue: column.sampleValue })
+                    ["custrecord_wtz_sql_report_col_type" /* REPORT_COLUMNS.FIELDS.COLUMN_DATA_TYPE */]: getDataTypeIdFromSampleValue({ sampleValue: column.sampleValue }),
                 };
                 Object.entries(valuesToSet).forEach(([fieldId, value]) => {
                     newColumn.setValue({ fieldId, value });
@@ -264,10 +247,10 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;!(__WEBPACK_AMD_
             FROM ${"customlist_wtz_sql_report_col_types" /* COLUMN_TYPES.RECORD.SCRIPTID */}
             WHERE scriptid = ?
         `,
-            params: [columnTypeScriptId]
+            params: [columnTypeScriptId],
         }).asMappedResults()[0].id;
     };
-    const deleteAllOrphanColumns = (recordId) => {
+    const deleteAllOrphanColumns = () => {
         query.runSuiteQL({
             query: `
             SELECT id
@@ -307,6 +290,63 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;!(__WEBPACK_AMD_
 }).apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__),
 		__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
+
+/***/ }),
+
+/***/ "./src/TypeScript/models/customrecord_wtz_suiteql_report_variable/index.ts":
+/***/ ((module, exports, __webpack_require__) => {
+
+var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__, exports, __webpack_require__("N/error"), __webpack_require__("N/query")], __WEBPACK_AMD_DEFINE_RESULT__ = (function (require, exports, error, query) {
+    Object.defineProperty(exports, "__esModule", ({ value: true }));
+    exports.getVariables = void 0;
+    const getVariables = (reportId) => {
+        if (!reportId) {
+            throw error.create({
+                name: 'INVALID_REPORT_ID',
+                message: `Invalid report id. Received: ${reportId}`,
+            });
+        }
+        const variables = query.runSuiteQL({
+            query: `
+            SELECT
+                RV.${"custrecord_wtz_sql_report_var_id" /* REPORT_VARIABLES.FIELDS.VARIABLE_ID */} as variable_id
+                ,CT.scriptId as type
+                ,RV.${"custrecord_wtz_sql_report_var_label" /* REPORT_VARIABLES.FIELDS.VARIABLE_LABEL */} as label
+                ,RV.${"custrecord_wtz_sql_report_var_def" /* REPORT_VARIABLES.FIELDS.VARIABLE_DEFAULT_SQL */} as default_value
+            FROM
+                ${"customrecord_wtz_suiteql_report_variable" /* REPORT_VARIABLES.RECORD.SCRIPTID */} RV
+                LEFT JOIN ${"customlist_wtz_sql_report_col_types" /* COLUMN_TYPES.RECORD.SCRIPTID */} CT ON RV.${"custrecord_wtz_sql_report_var_type" /* REPORT_VARIABLES.FIELDS.VARIABLE_DATA_TYPE */} = CT.id
+            WHERE
+                ${"custrecord_wtz_sql_report_var_report" /* REPORT_VARIABLES.FIELDS.SUITEQL_REPORT */} = ?
+        `,
+            params: [reportId],
+        }).asMappedResults();
+        return variables.reduce((acc, variable) => {
+            acc[variable.variable_id] = {
+                type: variable.type,
+                label: variable.label,
+                defaultValue: query.runSuiteQL({
+                    query: `
+                    SELECT
+                        ${variable.type === 'DATE' ? 'to_char(' : ''}${variable.default_value}${variable.type === 'DATE' ? `, 'YYYY-MM-DD')` : ''} as default_value
+                    FROM DUAL`,
+                }).asMappedResults()[0].default_value,
+            };
+            return acc;
+        }, {});
+    };
+    exports.getVariables = getVariables;
+}).apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__),
+		__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
+
+
+/***/ }),
+
+/***/ "N/error":
+/***/ ((module) => {
+
+"use strict";
+module.exports = __WEBPACK_EXTERNAL_MODULE_N_error__;
 
 /***/ }),
 

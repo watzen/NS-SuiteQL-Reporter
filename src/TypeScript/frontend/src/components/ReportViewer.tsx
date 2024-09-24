@@ -1,14 +1,20 @@
 import FileDownloadIcon from '@mui/icons-material/FileDownload'
 import { Paper, Box, Button } from '@mui/material'
-import Grid from '@mui/material/Grid'
-import { mkConfig, generateCsv, download } from 'export-to-csv'
-import { MaterialReactTable, useMaterialReactTable, type MRT_ColumnDef } from 'material-react-table'
-import React, { useCallback, useEffect, useState } from 'react'
-import { Column } from '../../../scripts/reporter api suitelet/column-getter/index'
+import Grid from '@mui/material/Grid2'
+import {
+    mkConfig,
+    generateCsv,
+    download
+} from 'export-to-csv'
+import { MaterialReactTable, useMaterialReactTable } from 'material-react-table'
+import type { MRT_ColumnDef } from 'material-react-table'
+import React, { useEffect, useState } from 'react'
+import { Variables } from '../../../models/customrecord_wtz_suiteql_report_variable'
+import { Column } from '../../../scripts/reporter api suitelet/column-getter'
 import { Resource } from '../constants'
-import useFetch from '../customHooks/useFetch'
 import { UserPreferences } from '../types'
 import utils from '../utils/utils'
+import { ReportCriteria } from './ReportCriteria'
 
 
 type ReportRow = {
@@ -22,6 +28,7 @@ const ReportViewer = (): JSX.Element => {
 
     const [loading, setLoading] = useState(false)
     const [results, setResults] = useState<ReportRow[]>([])
+    const [criteria, setCriteria] = useState<Variables>({})
 
     const [userPreferences, setUserPreferences] = useState<UserPreferences>({ csvDelimiter: ',', csvDecimalDelimiter: '.', localeString: 'en-US' })
     const [reportColumns, setReportColumns] = useState<MRT_ColumnDef<ReportRow>[]>([])
@@ -36,9 +43,15 @@ const ReportViewer = (): JSX.Element => {
             console.log('userPreferencesResponseJSON', userPreferencesResponseJSON)
             setUserPreferences(userPreferencesResponseJSON)
 
+            const suiteletUrlGetVariables = utils.getSuiteletUrlForResource({ resource: Resource.GetVariables, reportId })
+            const variablesResponse = await fetch(suiteletUrlGetVariables)
+            const variablesResponseJSON = await variablesResponse.json()
+            console.log('variablesResponseJSON', variablesResponseJSON)
+            await setCriteria(variablesResponseJSON)
+
             const suiteletUrlGetColumns = utils.getSuiteletUrlForResource({
                 resource: Resource.GetColumns,
-                reportId: reportId,
+                reportId,
             })
             const columnsResponse = await fetch(suiteletUrlGetColumns)
             const columnsData = await columnsResponse.json() as Column[]
@@ -46,48 +59,64 @@ const ReportViewer = (): JSX.Element => {
 
             if(columnsData.length > 0) {
                 const columnDefinitions = columnsData.map(column => {
-                    let align = 'left'
-                    let cellFn: (props: any) => {}
+                    const columnObj: MRT_ColumnDef<ReportRow> = {
+                        accessorKey: column.id,
+                        header: column.label,
+                    }
                     switch (column.type) {
                         case 'CURRENCY':
-                            align = 'right'
-                            cellFn = (props) => {
+                            columnObj.muiTableHeadCellProps = { align: 'right' }
+                            columnObj.muiTableBodyCellProps = { align: 'center' }
+                            columnObj.Cell = (props) => {
                                 const cell = props.cell
-                                return cell.getValue().toLocaleString(userPreferencesResponseJSON.localeString)
+                                return (cell.getValue() as number || 0).toLocaleString(userPreferencesResponseJSON.localeString, {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2,
+                                })
                             }
                             break
                         case 'FLOAT':
-                            align = 'right'
+                            columnObj.muiTableHeadCellProps = { align: 'right' }
+                            columnObj.muiTableBodyCellProps = { align: 'center' }
                             break
                         case 'INTEGER':
-                            align = 'right'
+                            columnObj.muiTableHeadCellProps = { align: 'right' }
+                            columnObj.muiTableBodyCellProps = { align: 'center' }
                             break
                         case 'PERCENT':
-                            align = 'right'
+                            columnObj.muiTableHeadCellProps = { align: 'right' }
+                            columnObj.muiTableBodyCellProps = { align: 'center' }
+                            columnObj.Cell = (props) => {
+                                const cell = props.cell
+                                return `${((cell.getValue() as number || 0) * 100).toLocaleString(userPreferencesResponseJSON.localeString, {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2,
+                                })}%`
+                            }
+                            break
+                        case 'CHECKBOX':
+                            columnObj.muiTableHeadCellProps = { align: 'center' }
+                            columnObj.muiTableBodyCellProps = { align: 'center' }
+                            columnObj.Cell = (props) => {
+                                const cell = props.cell
+                                return cell.getValue() === 'T' ? 'Yes' : 'No'
+                            }
                             break
                     }
 
+                    return columnObj
 
-                    return {
-                        accessorKey: column.id,
-                        header: column.label,
-                        muiTableHeadCellProps: { align: align },
-                        muiTableBodyCellProps: { align: align },
-                        Cell: cellFn,
-                        //accessorFn: (originalRow) => originalRow.age, //alternate way
-                        //id: column, //id required if you use accessorFn instead of accessorKey
-                        //Header: <i style={{ color: 'red' }}>Age</i>, //optional custom markup
-                        //muiTableHeadCellProps: { style: { color: 'green' } }, //custom props
-                    }
-
-                })
+                }) as MRT_ColumnDef<ReportRow>[]
                 await setReportColumns(columnDefinitions)
             }
 
             const suiteletUrlAPI = utils.getSuiteletUrlForResource({
                 resource: Resource.RunReport,
                 reportId: reportId,
+                variables: variablesResponseJSON,
             })
+            console.log('suiteletUrlAPI', suiteletUrlAPI)
+            console.log('criteria', criteria)
             const reportResponse = await fetch(suiteletUrlAPI)
             const reportData = await reportResponse.json()
             console.log('returned reportData', reportData)
@@ -103,6 +132,30 @@ const ReportViewer = (): JSX.Element => {
         // NOTE: Run effect once on component mount, please
         // recheck dependencies if effect is updated.
     }, [])
+
+    const refreshReport = () => {
+        setLoading(true)
+        const fetchData = async () => {
+            const suiteletUrlAPI = utils.getSuiteletUrlForResource({
+                resource: Resource.RunReport,
+                reportId: reportId,
+                variables: criteria,
+            })
+            console.log('suiteletUrlAPI', suiteletUrlAPI)
+            console.log('criteria', criteria)
+            const reportResponse = await fetch(suiteletUrlAPI)
+            const reportData = await reportResponse.json()
+            console.log('returned reportData', reportData)
+            if(reportData.length > 0) {
+                await setReportColumnOrder(Object.keys(reportData[0]))
+            }
+            await setResults(reportData)
+            await setLoading(false)
+
+        }
+        fetchData()
+    }
+
     const handleExportDataAsCSV = () => {
         const csvConfig = mkConfig({
             fieldSeparator: userPreferences.csvDelimiter,
@@ -111,6 +164,16 @@ const ReportViewer = (): JSX.Element => {
         })
         const csv = generateCsv(csvConfig)(results)
         download(csvConfig)(csv)
+    }
+
+    const handleCriteriaChange = (variableId: string, value: string) => {
+        setCriteria(prev => ({
+            ...prev,
+            [variableId]: {
+                ...prev[variableId],
+                defaultValue: value,
+            },
+        }))
     }
 
     //pass table options to useMaterialReactTable
@@ -129,7 +192,7 @@ const ReportViewer = (): JSX.Element => {
             minSize: 80,
             size: 160, //default size is usually 180
         },
-        muiTableContainerProps: { sx: { maxHeight: 'calc(100vh - 300px)', maxWidth: 'calc(100vw - 50px)' } },
+        muiTableContainerProps: { sx: { maxHeight: 'calc(100vh - 350px)', maxWidth: 'calc(100vw - 50px)' } },
         muiTableBodyProps: {
             sx: {
                 //stripe the rows, make odd rows a darker color
@@ -142,15 +205,15 @@ const ReportViewer = (): JSX.Element => {
             },
         },
         layoutMode: 'grid',
-        enableColumnResizing: false,
-        columnResizeMode: 'onChange', //default
-        enableRowSelection: false, //enable some features
+        enableColumnResizing: true,
+        columnResizeMode: 'onChange',
+        enableRowSelection: false,
         enablePagination: false,
         enableRowVirtualization: true,
         //enableColumnOrdering: true,
         //enableColumnDragging: true,
-        enableGlobalFilter: true, //turn off a feature
-        enableBottomToolbar: false,
+        enableGlobalFilter: true,
+        enableBottomToolbar: true,
         renderTopToolbarCustomActions: () => (
             <Box
                 sx={{
@@ -174,8 +237,24 @@ const ReportViewer = (): JSX.Element => {
 
     return (
         <Grid container spacing={2}>
-            <Grid item xs={12}>
+            <Grid size={{ xs: 12 }}>
                 <Paper elevation={3}>
+                    <Grid container spacing={2} style={{ padding: 16 }}>
+                        <Grid>
+                            <Button
+                                variant={'contained'}
+                                onClick={refreshReport}
+                            >
+                                Refresh Report
+                            </Button>
+                        </Grid>
+                        <Grid>
+                            <ReportCriteria
+                                criteria={criteria}
+                                handleCriteriaChange={handleCriteriaChange}
+                            />
+                        </Grid>
+                    </Grid>
                     <MaterialReactTable table={table} />
                 </Paper>
             </Grid>

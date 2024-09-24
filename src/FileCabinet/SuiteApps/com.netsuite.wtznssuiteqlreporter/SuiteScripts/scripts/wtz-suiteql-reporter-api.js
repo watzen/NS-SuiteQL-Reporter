@@ -16,7 +16,57 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;!(__WEBPACK_AMD_
         Resource[Resource["GetColumns"] = 0] = "GetColumns";
         Resource[Resource["RunReport"] = 1] = "RunReport";
         Resource[Resource["UserPreferences"] = 2] = "UserPreferences";
+        Resource[Resource["GetVariables"] = 3] = "GetVariables";
     })(Resource = exports.Resource || (exports.Resource = {}));
+}).apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__),
+		__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
+
+
+/***/ }),
+
+/***/ "./src/TypeScript/models/customrecord_wtz_suiteql_report_variable/index.ts":
+/***/ ((module, exports, __webpack_require__) => {
+
+var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__, exports, __webpack_require__("N/error"), __webpack_require__("N/query")], __WEBPACK_AMD_DEFINE_RESULT__ = (function (require, exports, error, query) {
+    Object.defineProperty(exports, "__esModule", ({ value: true }));
+    exports.getVariables = void 0;
+    const getVariables = (reportId) => {
+        if (!reportId) {
+            throw error.create({
+                name: 'INVALID_REPORT_ID',
+                message: `Invalid report id. Received: ${reportId}`,
+            });
+        }
+        const variables = query.runSuiteQL({
+            query: `
+            SELECT
+                RV.${"custrecord_wtz_sql_report_var_id" /* REPORT_VARIABLES.FIELDS.VARIABLE_ID */} as variable_id
+                ,CT.scriptId as type
+                ,RV.${"custrecord_wtz_sql_report_var_label" /* REPORT_VARIABLES.FIELDS.VARIABLE_LABEL */} as label
+                ,RV.${"custrecord_wtz_sql_report_var_def" /* REPORT_VARIABLES.FIELDS.VARIABLE_DEFAULT_SQL */} as default_value
+            FROM
+                ${"customrecord_wtz_suiteql_report_variable" /* REPORT_VARIABLES.RECORD.SCRIPTID */} RV
+                LEFT JOIN ${"customlist_wtz_sql_report_col_types" /* COLUMN_TYPES.RECORD.SCRIPTID */} CT ON RV.${"custrecord_wtz_sql_report_var_type" /* REPORT_VARIABLES.FIELDS.VARIABLE_DATA_TYPE */} = CT.id
+            WHERE
+                ${"custrecord_wtz_sql_report_var_report" /* REPORT_VARIABLES.FIELDS.SUITEQL_REPORT */} = ?
+        `,
+            params: [reportId],
+        }).asMappedResults();
+        return variables.reduce((acc, variable) => {
+            acc[variable.variable_id] = {
+                type: variable.type,
+                label: variable.label,
+                defaultValue: query.runSuiteQL({
+                    query: `
+                    SELECT
+                        ${variable.type === 'DATE' ? 'to_char(' : ''}${variable.default_value}${variable.type === 'DATE' ? `, 'YYYY-MM-DD')` : ''} as default_value
+                    FROM DUAL`,
+                }).asMappedResults()[0].default_value,
+            };
+            return acc;
+        }, {});
+    };
+    exports.getVariables = getVariables;
 }).apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__),
 		__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
@@ -62,31 +112,41 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;!(__WEBPACK_AMD_
 /***/ "./src/TypeScript/scripts/reporter api suitelet/controller-api.ts":
 /***/ ((module, exports, __webpack_require__) => {
 
-var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__, exports, __webpack_require__("N/log"), __webpack_require__("./src/TypeScript/frontend/src/constants.ts"), __webpack_require__("./src/TypeScript/scripts/reporter api suitelet/column-getter/index.ts"), __webpack_require__("./src/TypeScript/scripts/reporter api suitelet/report-generator/index.ts"), __webpack_require__("./src/TypeScript/scripts/reporter api suitelet/user-preferences/index.ts"), __webpack_require__("./src/TypeScript/scripts/reporter api suitelet/utils.ts")], __WEBPACK_AMD_DEFINE_RESULT__ = (function (require, exports, log, constants_1, columnGetterService, reportGeneratorService, index_1, utils) {
+var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__, exports, __webpack_require__("N/log"), __webpack_require__("./src/TypeScript/frontend/src/constants.ts"), __webpack_require__("./src/TypeScript/models/customrecord_wtz_suiteql_report_variable/index.ts"), __webpack_require__("./src/TypeScript/scripts/reporter api suitelet/column-getter/index.ts"), __webpack_require__("./src/TypeScript/scripts/reporter api suitelet/report-generator/index.ts"), __webpack_require__("./src/TypeScript/scripts/reporter api suitelet/user-preferences/index.ts"), __webpack_require__("./src/TypeScript/scripts/reporter api suitelet/utils.ts")], __WEBPACK_AMD_DEFINE_RESULT__ = (function (require, exports, log, constants_1, customrecord_wtz_suiteql_report_variable_1, columnGetterService, reportGeneratorService, user_preferences_1, utils) {
     Object.defineProperty(exports, "__esModule", ({ value: true }));
     exports.get = void 0;
     function get(context) {
-        const { resource, reportId } = context.request.parameters;
+        const { resource, reportId, variables } = context.request.parameters;
         const parsedResource = utils.parseResource(resource);
         if (parsedResource === constants_1.Resource.UserPreferences) {
-            const userPreferences = index_1.userPreferenceService.getUserPreferences();
+            const userPreferences = user_preferences_1.userPreferenceService.getUserPreferences();
             log.audit('userPreferences', userPreferences);
-            context.response.setHeader({ name: 'content-type', value: 'application/json' });
+            context.response.setHeader({ name: 'Content-Type', value: 'application/json' });
             context.response.write(JSON.stringify(userPreferences));
             return;
         }
         if (parsedResource === constants_1.Resource.RunReport && reportId) {
-            const reportData = reportGeneratorService.getReportData(reportId);
-            context.response.setHeader({ name: 'content-type', value: 'application/json' });
+            const reportData = reportGeneratorService.getReportData({
+                reportId,
+                variables: variables ? JSON.parse(variables) : undefined,
+            });
+            context.response.setHeader({ name: 'Content-Type', value: 'application/json' });
             context.response.write(JSON.stringify(reportData));
             log.audit('reportData', reportData);
             return;
         }
         if (parsedResource === constants_1.Resource.GetColumns && reportId) {
             const columns = columnGetterService.getColumns(reportId);
-            context.response.setHeader({ name: 'content-type', value: 'application/json' });
+            context.response.setHeader({ name: 'Content-Type', value: 'application/json' });
             context.response.write(JSON.stringify(columns));
             log.audit('columns', columns);
+            return;
+        }
+        if (parsedResource === constants_1.Resource.GetVariables && reportId) {
+            const variables = (0, customrecord_wtz_suiteql_report_variable_1.getVariables)(reportId);
+            context.response.setHeader({ name: 'Content-Type', value: 'application/json' });
+            context.response.write(JSON.stringify(variables));
+            log.audit('variables', variables);
             return;
         }
     }
@@ -100,10 +160,10 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;!(__WEBPACK_AMD_
 /***/ "./src/TypeScript/scripts/reporter api suitelet/report-generator/index.ts":
 /***/ ((module, exports, __webpack_require__) => {
 
-var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__, exports, __webpack_require__("N/record"), __webpack_require__("N/error"), __webpack_require__("N/query")], __WEBPACK_AMD_DEFINE_RESULT__ = (function (require, exports, record, error, query) {
+var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__, exports, __webpack_require__("N/error"), __webpack_require__("N/query"), __webpack_require__("N/record")], __WEBPACK_AMD_DEFINE_RESULT__ = (function (require, exports, error, query, record) {
     Object.defineProperty(exports, "__esModule", ({ value: true }));
     exports.getReportData = void 0;
-    const getReportData = (reportId) => {
+    const getReportData = ({ reportId, variables }) => {
         if (!reportId) {
             throw error.create({
                 name: 'INVALID_REPORT_ID',
@@ -114,7 +174,10 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;!(__WEBPACK_AMD_
             type: "customrecord_wtz_suiteql_report" /* SUITEQL_REPORT.RECORD.SCRIPTID */,
             id: (typeof reportId === 'number') ? reportId : parseInt(reportId, 10),
         });
-        const suiteQl = suiteQlReportRec.getValue("custrecord_wtz_sql_report_suiteql" /* SUITEQL_REPORT.FIELDS.SUITEQL */);
+        let suiteQl = suiteQlReportRec.getValue("custrecord_wtz_sql_report_suiteql" /* SUITEQL_REPORT.FIELDS.SUITEQL */);
+        Object.entries(variables).forEach(([variableId, variable]) => {
+            suiteQl = suiteQl.replace(new RegExp(`{{${variableId}}}`, 'g'), variable.defaultValue);
+        });
         return query.runSuiteQL({
             query: suiteQl,
         }).asMappedResults();
