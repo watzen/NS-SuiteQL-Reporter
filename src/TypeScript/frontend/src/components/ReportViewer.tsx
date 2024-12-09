@@ -57,15 +57,23 @@ const ReportViewer = (): JSX.Element => {
         return reportColumns.map(column => ({
             ...column,
             filterSelectOptions: ['select', 'multi-select'].includes((column.filterVariant as string)) ? Array.from(new Set(results.map(row => row[column.accessorKey as string]))) : undefined,
-            Footer: column.Footer ? () => (
-                <Stack>
-                        Sum: {footerValues[column.accessorKey as string]?.toLocaleString(userPreferences.localeString, {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                    }) || '0'}
-                </Stack>
-            )
-                : undefined,
+            Footer: column.Footer ? ({ table }) => {
+                // Calculate the sum of filtered rows
+                const filteredRows = table.getFilteredRowModel().rows
+                const columnSum = filteredRows.reduce((sum, row) => {
+                    const cellValue = row.getValue(column.accessorKey as string)
+                    return sum + (typeof cellValue === 'number' ? cellValue : 0)
+                }, 0)
+
+                return (
+                    <Stack>
+                        Sum: {columnSum.toLocaleString(userPreferences.localeString, {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                        })}
+                    </Stack>
+                )
+            } : undefined,
         }))
     }, [results, reportColumns, footerValues, userPreferences])
 
@@ -193,25 +201,40 @@ const ReportViewer = (): JSX.Element => {
     }, [])
 
     const refreshReport = () => {
-        setLoading(true)
+
         const fetchData = async () => {
-            const suiteletUrlAPI = utils.getSuiteletUrlForResource({
-                resource: Resource.RunReport,
-                reportId: reportId,
-                variables: criteria,
-            })
-            console.log('suiteletUrlAPI', suiteletUrlAPI)
-            console.log('criteria', criteria)
-            const reportResponse = await fetch(suiteletUrlAPI)
-            const reportData = await reportResponse.json()
-            console.log('returned reportData', reportData)
-            if(reportData.length > 0) {
-                await setReportColumnOrder(Object.keys(reportData[0]))
-            }
-            await setResults(reportData)
-            await setLoading(false)
+            let pageNumber = 0
+
+            do {
+                const suiteletUrlAPI = utils.getSuiteletUrlForResource({
+                    resource: Resource.RunReport,
+                    reportId: reportId,
+                    variables: criteria,
+                    pageNumber,
+                })
+                console.log('suiteletUrlAPI', suiteletUrlAPI)
+                console.log('criteria', criteria)
+                const reportResponse = await fetch(suiteletUrlAPI)
+                const reportData = await reportResponse.json()
+                console.log('returned reportData', reportData)
+                if(reportData.length > 0) {
+                    await setReportColumnOrder(Object.keys(reportData[0]))
+                }
+                await setResults(prev => [...prev, ...reportData])
+                if(reportData.length < 5000) {
+                    abortFetchRef.current = true
+                }
+                pageNumber++
+
+            } while (!abortFetchRef.current)
+
+            setLoading(false)
 
         }
+
+        setLoading(true)
+        setResults([])
+        abortFetchRef.current = false
         fetchData()
     }
 
@@ -221,7 +244,7 @@ const ReportViewer = (): JSX.Element => {
             decimalSeparator: userPreferences.csvDecimalDelimiter,
             useKeysAsHeaders: true,
         })
-        const csv = generateCsv(csvConfig)(results)
+        const csv = generateCsv(csvConfig)(table.getFilteredRowModel().rows.map(row => row.original))
         download(csvConfig)(csv)
     }
 
@@ -302,7 +325,7 @@ const ReportViewer = (): JSX.Element => {
                 }}
             >
                 <Typography>
-                    Result Count: {results.length}
+                    Result Count: {results.length}, Filtered Count: {table.getFilteredRowModel().rows.length}
                 </Typography>
             </Box>
         ),
