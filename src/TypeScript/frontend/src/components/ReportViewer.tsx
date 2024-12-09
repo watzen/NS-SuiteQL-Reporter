@@ -1,5 +1,5 @@
 import FileDownloadIcon from '@mui/icons-material/FileDownload'
-import { Paper, Box, Button } from '@mui/material'
+import { Paper, Box, Button, Typography, Stack } from '@mui/material'
 import Grid from '@mui/material/Grid2'
 import {
     mkConfig,
@@ -8,12 +8,13 @@ import {
 } from 'export-to-csv'
 import { MaterialReactTable, useMaterialReactTable } from 'material-react-table'
 import type { MRT_ColumnDef } from 'material-react-table'
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef, useMemo } from 'react'
 import { Variables } from '../../../models/customrecord_wtz_suiteql_report_variable'
 import { Column } from '../../../scripts/reporter api suitelet/column-getter'
 import { Resource } from '../constants'
 import { UserPreferences } from '../types'
 import utils from '../utils/utils'
+import { FetchingMoreThanLimitDialog } from './FetchingMoreThanLimitDialog'
 import { ReportCriteria } from './ReportCriteria'
 
 
@@ -26,13 +27,47 @@ const ReportViewer = (): JSX.Element => {
     const urlParams = new URLSearchParams(window.location.search)
     const reportId = parseInt(urlParams.get('id') as string, 10)
 
+    const abortFetchRef = useRef(false)
+
     const [loading, setLoading] = useState(false)
     const [results, setResults] = useState<ReportRow[]>([])
+    const [footerValues, setFooterValues] = useState<Record<string, number>>({})
     const [criteria, setCriteria] = useState<Variables>({})
 
     const [userPreferences, setUserPreferences] = useState<UserPreferences>({ csvDelimiter: ',', csvDecimalDelimiter: '.', localeString: 'en-US' })
     const [reportColumns, setReportColumns] = useState<MRT_ColumnDef<ReportRow>[]>([])
     const [reportColumnOrder, setReportColumnOrder] = useState<string[]>([])
+
+    useEffect(() => {
+        if (results.length > 0 && reportColumns.length > 0) {
+            const footerValuesObj: Record<string, number> = {}
+            reportColumns.forEach(column => {
+                if (column.accessorKey && typeof results[0][column.accessorKey] === 'number') {
+                    footerValuesObj[column.accessorKey as string] = results.reduce((sum, row) => {
+                        return sum + (row[column.accessorKey as string] as number || 0)
+                    }, 0)
+                }
+            })
+            console.log('Calculated footer values:', footerValuesObj)
+            setFooterValues(footerValuesObj)
+        }
+    }, [results, reportColumns])
+
+    const memoizedColumns = useMemo(() => {
+        return reportColumns.map(column => ({
+            ...column,
+            filterSelectOptions: ['select', 'multi-select'].includes((column.filterVariant as string)) ? Array.from(new Set(results.map(row => row[column.accessorKey as string]))) : undefined,
+            Footer: column.Footer ? () => (
+                <Stack>
+                        Sum: {footerValues[column.accessorKey as string]?.toLocaleString(userPreferences.localeString, {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                    }) || '0'}
+                </Stack>
+            )
+                : undefined,
+        }))
+    }, [results, reportColumns, footerValues, userPreferences])
 
     useEffect(() => {
         const fetchData = async () => {
@@ -62,11 +97,14 @@ const ReportViewer = (): JSX.Element => {
                     const columnObj: MRT_ColumnDef<ReportRow> = {
                         accessorKey: column.id,
                         header: column.label,
+                        filterVariant: 'select'
                     }
                     switch (column.type) {
                         case 'CURRENCY':
                             columnObj.muiTableHeadCellProps = { align: 'right' }
-                            columnObj.muiTableBodyCellProps = { align: 'center' }
+                            columnObj.muiTableBodyCellProps = { align: 'right' }
+                            columnObj.muiTableFooterCellProps = { align: 'right' }
+                            columnObj.filterVariant = 'range'
                             columnObj.Cell = (props) => {
                                 const cell = props.cell
                                 return (cell.getValue() as number || 0).toLocaleString(userPreferencesResponseJSON.localeString, {
@@ -74,18 +112,27 @@ const ReportViewer = (): JSX.Element => {
                                     maximumFractionDigits: 2,
                                 })
                             }
+                            columnObj.Footer = () => (<Stack>Sum: calculating...</Stack>)
                             break
                         case 'FLOAT':
                             columnObj.muiTableHeadCellProps = { align: 'right' }
-                            columnObj.muiTableBodyCellProps = { align: 'center' }
+                            columnObj.muiTableBodyCellProps = { align: 'right' }
+                            columnObj.muiTableFooterCellProps = { align: 'right' }
+                            columnObj.filterVariant = 'range'
+                            columnObj.Footer = () => (<Stack>Sum: calculating...</Stack>)
                             break
                         case 'INTEGER':
                             columnObj.muiTableHeadCellProps = { align: 'right' }
-                            columnObj.muiTableBodyCellProps = { align: 'center' }
+                            columnObj.muiTableBodyCellProps = { align: 'right' }
+                            columnObj.muiTableFooterCellProps = { align: 'right' }
+                            columnObj.filterVariant = 'range'
+                            columnObj.Footer = () => (<Stack>Count: calculating...</Stack>)
                             break
                         case 'PERCENT':
                             columnObj.muiTableHeadCellProps = { align: 'right' }
-                            columnObj.muiTableBodyCellProps = { align: 'center' }
+                            columnObj.muiTableBodyCellProps = { align: 'right' }
+                            columnObj.muiTableFooterCellProps = { align: 'right' }
+                            columnObj.filterVariant = 'range'
                             columnObj.Cell = (props) => {
                                 const cell = props.cell
                                 return `${((cell.getValue() as number || 0) * 100).toLocaleString(userPreferencesResponseJSON.localeString, {
@@ -110,24 +157,36 @@ const ReportViewer = (): JSX.Element => {
                 await setReportColumns(columnDefinitions)
             }
 
-            const suiteletUrlAPI = utils.getSuiteletUrlForResource({
-                resource: Resource.RunReport,
-                reportId: reportId,
-                variables: variablesResponseJSON,
-            })
-            console.log('suiteletUrlAPI', suiteletUrlAPI)
-            console.log('criteria', criteria)
-            const reportResponse = await fetch(suiteletUrlAPI)
-            const reportData = await reportResponse.json()
-            console.log('returned reportData', reportData)
-            if(reportData.length > 0) {
-                await setReportColumnOrder(Object.keys(reportData[0]))
-            }
-            await setResults(reportData)
-            await setLoading(false)
+            let pageNumber = 0
+
+            do {
+                const suiteletUrlAPI = utils.getSuiteletUrlForResource({
+                    resource: Resource.RunReport,
+                    reportId: reportId,
+                    variables: variablesResponseJSON,
+                    pageNumber,
+                })
+                console.log('suiteletUrlAPI', suiteletUrlAPI)
+                console.log('criteria', criteria)
+                const reportResponse = await fetch(suiteletUrlAPI)
+                const reportData = await reportResponse.json()
+                console.log('returned reportData', reportData)
+                if(reportData.length > 0) {
+                    await setReportColumnOrder(Object.keys(reportData[0]))
+                }
+                await setResults(prev => [...prev, ...reportData])
+                if(reportData.length < 5000) {
+                    abortFetchRef.current = true
+                }
+                pageNumber++
+
+            } while (!abortFetchRef.current)
+
+            setLoading(false)
 
         }
         setLoading(true)
+        abortFetchRef.current = false
         fetchData()
         // NOTE: Run effect once on component mount, please
         // recheck dependencies if effect is updated.
@@ -178,7 +237,7 @@ const ReportViewer = (): JSX.Element => {
 
     //pass table options to useMaterialReactTable
     const table = useMaterialReactTable({
-        columns: reportColumns,
+        columns: memoizedColumns,
         data: results, //must be memoized or stable (useState, useMemo, defined outside of this component, etc.)
         initialState: {
             density: 'compact',
@@ -192,7 +251,7 @@ const ReportViewer = (): JSX.Element => {
             minSize: 80,
             size: 160, //default size is usually 180
         },
-        muiTableContainerProps: { sx: { maxHeight: 'calc(100vh - 350px)', maxWidth: 'calc(100vw - 50px)' } },
+        muiTableContainerProps: { sx: { maxHeight: 'calc(100vh - 450px)', maxWidth: 'calc(100vw - 50px)' } },
         muiTableBodyProps: {
             sx: {
                 //stripe the rows, make odd rows a darker color
@@ -214,6 +273,7 @@ const ReportViewer = (): JSX.Element => {
         //enableColumnDragging: true,
         enableGlobalFilter: true,
         enableBottomToolbar: true,
+        enableStickyFooter: true,
         renderTopToolbarCustomActions: () => (
             <Box
                 sx={{
@@ -232,11 +292,35 @@ const ReportViewer = (): JSX.Element => {
                 </Button>
             </Box>
         ),
+        renderBottomToolbarCustomActions: () => (
+            <Box
+                sx={{
+                    display: 'flex',
+                    gap: '8px',
+                    padding: '5px',
+                    flexWrap: 'wrap',
+                }}
+            >
+                <Typography>
+                    Result Count: {results.length}
+                </Typography>
+            </Box>
+        ),
     })
 
+    const handleAbortFetch = () => {
+        abortFetchRef.current = true
+        setLoading(false)
+    }
 
     return (
         <Grid container spacing={2}>
+            <FetchingMoreThanLimitDialog
+                open={loading}
+                id={'fetching-more-than-limit-dialog'}
+                fetchedResults={results}
+                handleAbortFetch={handleAbortFetch}
+            />
             <Grid size={{ xs: 12 }}>
                 <Paper elevation={3}>
                     <Grid container spacing={2} style={{ padding: 16 }}>

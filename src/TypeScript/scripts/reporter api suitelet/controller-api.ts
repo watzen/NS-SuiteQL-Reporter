@@ -8,7 +8,7 @@ import { userPreferenceService } from './user-preferences'
 import * as utils from './utils'
 
 export function get(context: EntryPoints.Suitelet.onRequestContext): void {
-    const { resource, reportId, variables } = context.request.parameters
+    const { resource, reportId, variables, pageNumber } = context.request.parameters
 
     const parsedResource = utils.parseResource(resource)
 
@@ -23,6 +23,7 @@ export function get(context: EntryPoints.Suitelet.onRequestContext): void {
     if (parsedResource === Resource.RunReport && reportId) {
         const reportData = reportGeneratorService.getReportData({
             reportId,
+            pageNumber: pageNumber | 0,
             variables: variables ? JSON.parse(variables) : undefined,
         })
         context.response.setHeader( { name: 'Content-Type', value: 'application/json' } )

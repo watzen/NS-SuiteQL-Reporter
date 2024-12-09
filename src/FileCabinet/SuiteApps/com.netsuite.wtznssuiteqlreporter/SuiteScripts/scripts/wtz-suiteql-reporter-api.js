@@ -116,7 +116,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;!(__WEBPACK_AMD_
     Object.defineProperty(exports, "__esModule", ({ value: true }));
     exports.get = void 0;
     function get(context) {
-        const { resource, reportId, variables } = context.request.parameters;
+        const { resource, reportId, variables, pageNumber } = context.request.parameters;
         const parsedResource = utils.parseResource(resource);
         if (parsedResource === constants_1.Resource.UserPreferences) {
             const userPreferences = user_preferences_1.userPreferenceService.getUserPreferences();
@@ -128,6 +128,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;!(__WEBPACK_AMD_
         if (parsedResource === constants_1.Resource.RunReport && reportId) {
             const reportData = reportGeneratorService.getReportData({
                 reportId,
+                pageNumber: pageNumber | 0,
                 variables: variables ? JSON.parse(variables) : undefined,
             });
             context.response.setHeader({ name: 'Content-Type', value: 'application/json' });
@@ -163,7 +164,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;!(__WEBPACK_AMD_
 var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__, exports, __webpack_require__("N/error"), __webpack_require__("N/query"), __webpack_require__("N/record")], __WEBPACK_AMD_DEFINE_RESULT__ = (function (require, exports, error, query, record) {
     Object.defineProperty(exports, "__esModule", ({ value: true }));
     exports.getReportData = void 0;
-    const getReportData = ({ reportId, variables }) => {
+    const getReportData = ({ reportId, pageNumber, variables }) => {
         if (!reportId) {
             throw error.create({
                 name: 'INVALID_REPORT_ID',
@@ -178,8 +179,21 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;!(__WEBPACK_AMD_
         Object.entries(variables).forEach(([variableId, variable]) => {
             suiteQl = suiteQl.replace(new RegExp(`{{${variableId}}}`, 'g'), variable.defaultValue);
         });
+        const startRow = pageNumber * 5000 + 1;
+        const endRow = pageNumber * 5000 + 5000;
         return query.runSuiteQL({
-            query: suiteQl,
+            query: `
+        SELECT *
+            FROM (
+                SELECT
+                    ROWNUM AS RN,
+                    *
+                FROM (
+                    ${suiteQl}
+                )
+            )
+            WHERE RN BETWEEN ${startRow} AND ${endRow}
+        `,
         }).asMappedResults();
     };
     exports.getReportData = getReportData;

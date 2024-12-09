@@ -8,10 +8,10 @@ function baseUrlAPI() {
     return `/app/site/hosting/scriptlet.nl?script=${scriptid}&deploy=${deploymentid}`
 }
 
-function getSuiteletUrlForResource(options: {resource: Resource, reportId?: number, date?: string, variables?: Variables}): string {
+function getSuiteletUrlForResource(options: {resource: Resource, reportId?: number, date?: string, variables?: Variables, pageNumber?: number }): string {
     switch(options.resource) {
         case Resource.RunReport:
-            return `${baseUrlAPI()}&resource=${options.resource}&reportId=${options.reportId}${options.variables ? `&variables=${encodeURIComponent(JSON.stringify(options.variables))}` : ''}`
+            return `${baseUrlAPI()}&resource=${options.resource}&reportId=${options.reportId}${options.variables ? `&pageNumber=${options.pageNumber}&variables=${encodeURIComponent(JSON.stringify(options.variables))}` : ''}`
         case Resource.GetColumns:
             return `${baseUrlAPI()}&resource=${options.resource}&reportId=${options.reportId}`
         case Resource.UserPreferences:

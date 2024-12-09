@@ -9,9 +9,10 @@ type ReportRow = {
 }
 type GetReportData = {
     reportId: number | string,
+    pageNumber: number,
     variables?: Variables
 }
-export const getReportData = ({ reportId, variables }: GetReportData): ReportRow[] => {
+export const getReportData = ({ reportId, pageNumber, variables }: GetReportData): ReportRow[] => {
 
     if(!reportId) {
         throw error.create({
@@ -30,8 +31,22 @@ export const getReportData = ({ reportId, variables }: GetReportData): ReportRow
         suiteQl = suiteQl.replace(new RegExp(`{{${variableId}}}`, 'g'), variable.defaultValue)
     })
 
+    const startRow = pageNumber * 5000 + 1
+    const endRow = pageNumber * 5000 + 5000
+
     return query.runSuiteQL({
-        query: suiteQl,
+        query: `
+        SELECT *
+            FROM (
+                SELECT
+                    ROWNUM AS RN,
+                    *
+                FROM (
+                    ${suiteQl}
+                )
+            )
+            WHERE RN BETWEEN ${startRow} AND ${endRow}
+        `,
     }).asMappedResults()
 
 }
