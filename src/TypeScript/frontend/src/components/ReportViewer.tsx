@@ -56,7 +56,9 @@ const ReportViewer = (): JSX.Element => {
     const memoizedColumns = useMemo(() => {
         return reportColumns.map(column => ({
             ...column,
-            filterSelectOptions: ['select', 'multi-select'].includes((column.filterVariant as string)) ? Array.from(new Set(results.map(row => row[column.accessorKey as string]))) : undefined,
+            filterSelectOptions: ['select', 'multi-select'].includes((column.filterVariant as string)) ?
+                Array.from(new Set(results.map(row => row[column.accessorKey as string]))).sort((a, b) => (a as string)?.localeCompare(b as string))
+                : undefined,
             Footer: column.Footer ? ({ table }) => {
                 // Calculate the sum of filtered rows
                 const filteredRows = table.getFilteredRowModel().rows
