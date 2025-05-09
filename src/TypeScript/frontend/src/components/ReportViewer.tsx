@@ -22,6 +22,10 @@ type ReportRow = {
     [column: string]: string | number | boolean | Date | null
 }
 
+type CustomColumnDef<TData extends Record<string, any>> = MRT_ColumnDef<TData> & {
+    footerAggregator?: 'sum' | 'avg' | 'count' | string; // you can customize this union
+}
+
 const ReportViewer = (): JSX.Element => {
 
     const urlParams = new URLSearchParams(window.location.search)
@@ -35,17 +39,20 @@ const ReportViewer = (): JSX.Element => {
     const [criteria, setCriteria] = useState<Variables>({})
 
     const [userPreferences, setUserPreferences] = useState<UserPreferences>({ csvDelimiter: ',', csvDecimalDelimiter: '.', localeString: 'en-US' })
-    const [reportColumns, setReportColumns] = useState<MRT_ColumnDef<ReportRow>[]>([])
+    const [reportColumns, setReportColumns] = useState<CustomColumnDef<ReportRow>[]>([])
     const [reportColumnOrder, setReportColumnOrder] = useState<string[]>([])
 
     useEffect(() => {
         if (results.length > 0 && reportColumns.length > 0) {
             const footerValuesObj: Record<string, number> = {}
             reportColumns.forEach(column => {
-                if (column.accessorKey && typeof results[0][column.accessorKey] === 'number') {
+                if (column.accessorKey && column.footerAggregator === 'sum') {
                     footerValuesObj[column.accessorKey as string] = results.reduce((sum, row) => {
                         return sum + (row[column.accessorKey as string] as number || 0)
                     }, 0)
+                }
+                if(column.accessorKey && column.footerAggregator === 'count') {
+                    footerValuesObj[column.accessorKey as string] = results.filter(row => row[column.accessorKey as string] !== null).length
                 }
             })
             console.log('Calculated footer values:', footerValuesObj)
@@ -62,19 +69,31 @@ const ReportViewer = (): JSX.Element => {
             Footer: column.Footer ? ({ table }) => {
                 // Calculate the sum of filtered rows
                 const filteredRows = table.getFilteredRowModel().rows
-                const columnSum = filteredRows.reduce((sum, row) => {
-                    const cellValue = row.getValue(column.accessorKey as string)
-                    return sum + (typeof cellValue === 'number' ? cellValue : 0)
-                }, 0)
 
-                return (
-                    <Stack>
-                        Sum: {columnSum.toLocaleString(userPreferences.localeString, {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                        })}
-                    </Stack>
-                )
+                if(column.footerAggregator === 'count') {
+                    const columnCount = filteredRows.filter(row =>  row.getValue(column.accessorKey as string) !== null).length
+                    return (
+                        <Stack>
+                            Count: {columnCount.toLocaleString(userPreferences.localeString)}
+                        </Stack>
+                    )
+                }
+                if(column.footerAggregator === 'sum') {
+                    const columnSum = filteredRows.reduce((sum, row) => {
+                        const cellValue = row.getValue(column.accessorKey as string)
+                        return sum + (typeof cellValue === 'number' ? cellValue : 0)
+                    }, 0)
+
+                    return (
+                        <Stack>
+                            Sum: {columnSum.toLocaleString(userPreferences.localeString, {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                            })}
+                        </Stack>
+                    )
+                }
+
             } : undefined,
         }))
     }, [results, reportColumns, footerValues, userPreferences])
@@ -104,7 +123,8 @@ const ReportViewer = (): JSX.Element => {
 
             if(columnsData.length > 0) {
                 const columnDefinitions = columnsData.map(column => {
-                    const columnObj: MRT_ColumnDef<ReportRow> = {
+
+                    const columnObj: CustomColumnDef<ReportRow> = {
                         accessorKey: column.id,
                         header: column.label,
                         filterVariant: 'select'
@@ -123,6 +143,7 @@ const ReportViewer = (): JSX.Element => {
                                 })
                             }
                             columnObj.Footer = () => (<Stack>Sum: calculating...</Stack>)
+                            columnObj.footerAggregator = 'sum'
                             break
                         case 'FLOAT':
                             columnObj.muiTableHeadCellProps = { align: 'right' }
@@ -130,6 +151,14 @@ const ReportViewer = (): JSX.Element => {
                             columnObj.muiTableFooterCellProps = { align: 'right' }
                             columnObj.filterVariant = 'range'
                             columnObj.Footer = () => (<Stack>Sum: calculating...</Stack>)
+                            columnObj.Cell = (props) => {
+                                const cell = props.cell
+                                return (cell.getValue() as number || 0).toLocaleString(userPreferencesResponseJSON.localeString, {
+                                    minimumFractionDigits: 0,
+                                    maximumFractionDigits: 20,
+                                })
+                            }
+                            columnObj.footerAggregator = 'sum'
                             break
                         case 'INTEGER':
                             columnObj.muiTableHeadCellProps = { align: 'right' }
@@ -137,6 +166,7 @@ const ReportViewer = (): JSX.Element => {
                             columnObj.muiTableFooterCellProps = { align: 'right' }
                             columnObj.filterVariant = 'range'
                             columnObj.Footer = () => (<Stack>Count: calculating...</Stack>)
+                            columnObj.footerAggregator = 'count'
                             break
                         case 'PERCENT':
                             columnObj.muiTableHeadCellProps = { align: 'right' }
