@@ -1,6 +1,8 @@
-import FileDownloadIcon from '@mui/icons-material/FileDownload'
-import { Paper, Box, Button, Typography, Stack } from '@mui/material'
+import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined'
+import TableChartIcon from '@mui/icons-material/TableChart'
+import { Paper, Box, Button, IconButton, Tooltip, Typography, Stack } from '@mui/material'
 import Grid from '@mui/material/Grid2'
+import ExcelJS from 'exceljs'
 import {
     mkConfig,
     generateCsv,
@@ -280,6 +282,96 @@ const ReportViewer = (): JSX.Element => {
         download(csvConfig)(csv)
     }
 
+    const handleExportDataAsXLSX = async () => {
+
+        const getLength = (variable: string | number | Date): number => {
+            switch(typeof variable) {
+                case 'string':
+                    return variable.length
+                case 'number':
+                    return Number.isFinite(variable) ? variable.toFixed(2).toString().length : undefined
+                case 'object':
+                    if (variable instanceof String) {
+                        return variable.length
+                    } else if (variable instanceof Date) {
+                        return variable.toLocaleDateString().length
+                    }
+                    break
+            }
+            return 10
+        }
+
+        const data = table.getFilteredRowModel().rows.map(row => {
+            const { rn, ...rest } = row.original
+            return rest
+        })
+        if (!Array.isArray(data) || data.length === 0) {
+            console.error('Invalid or empty data provided.')
+            return
+        }
+
+        const workbook = new ExcelJS.Workbook()
+        const worksheet = workbook.addWorksheet('Sheet 1')
+
+        const keys = Object.keys(data[0])
+
+        // Get column headers using the reportColumns map
+        const headers = keys.map((key) => {
+            return reportColumns.find(col => col.accessorKey === key)?.header || key
+        })
+
+        // Add header row
+        const headerRow = worksheet.addRow(headers)
+
+        // Style the header row
+        headerRow.font = { bold: true }
+
+        // Freeze the header row
+        worksheet.views = [{ state: 'frozen', ySplit: 1 }]
+
+        // Enable autofilter
+        worksheet.autoFilter = {
+            from: { row: 1, column: 1 },
+            to: { row: 1, column: headers.length }
+        }
+
+        // Add the data rows
+        data.forEach(item => {
+            const rowValues = keys.map(key => item[key])
+            worksheet.addRow(rowValues)
+        })
+
+        // Calculate and set column widths
+        const columnWidths = keys.map(key => {
+            const maxLen = data.reduce(
+                (max, row) => Math.max(max, getLength(row[key]), getLength(reportColumns.find(col => col.accessorKey === key)?.header) || ''),
+                key.length
+            )
+            return { width: Math.min(80, maxLen + 5) } // +3 padding
+        })
+        console.log('columnWidths:', columnWidths)
+
+        worksheet.columns = columnWidths.map((col, index) => ({
+            key: keys[index],
+            width: col.width
+        }))
+
+        // Generate file and trigger download
+        const buffer = await workbook.xlsx.writeBuffer()
+
+        const blob = new Blob([buffer], {
+            type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        })
+
+        const url = window.URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = 'results.xlsx'
+        a.click()
+        window.URL.revokeObjectURL(url)
+
+    }
+
     const handleCriteriaChange = (variableId: string, value: string) => {
         setCriteria(prev => ({
             ...prev,
@@ -333,18 +425,23 @@ const ReportViewer = (): JSX.Element => {
             <Box
                 sx={{
                     display: 'flex',
-                    gap: '16px',
+                    gap: '2px',
                     padding: '8px',
                     flexWrap: 'wrap',
                 }}
             >
-                <Button
-                    //export all data that is currently in the table (ignore pagination, sorting, filtering, etc.)
-                    onClick={handleExportDataAsCSV}
-                    startIcon={<FileDownloadIcon />}
-                >
-                    Download as CSV
-                </Button>
+                <Typography>Download:</Typography>
+                <Tooltip title='Download as CSV'>
+                    <IconButton onClick={handleExportDataAsCSV}>
+                        <DescriptionOutlinedIcon />
+                    </IconButton>
+                </Tooltip>
+
+                <Tooltip title='Download as XLSX'>
+                    <IconButton color='success' onClick={handleExportDataAsXLSX}>
+                        <TableChartIcon />
+                    </IconButton>
+                </Tooltip>
             </Box>
         ),
         renderBottomToolbarCustomActions: () => (
